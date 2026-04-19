@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                    Stock Dashboard
+                </h1>
+                <p class="text-slate-400 text-sm">Real-time market data visualization</p>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <input id="symbol" 
+                       type="text" 
+                       placeholder="e.g. INFY.NS" 
+                       class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all w-full md:w-48">
+                <button onclick="loadData()" 
+                        class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95">
+                    Analyze
+                </button>
+            </div>
+        </header>
+
+        <main class="glass-card rounded-2xl p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 id="chartTitle" class="text-xl font-semibold text-slate-200">Market Overview</h2>
+                <span id="priceTag" class="text-emerald-400 font-mono text-lg"></span>
+            </div>
+            
+            <div class="relative h-[400px] w-full">
+                <canvas id="chart"></canvas>
+            </div>
+        </main>
+
+        <footer class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="glass-card p-4 rounded-xl">
+                <p class="text-slate-400 text-xs uppercase tracking-wider">Status</p>
+                <p id="status" class="text-emerald-400 font-medium">System Ready</p>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <p class="text-slate-400 text-xs uppercase tracking-wider">Last Sync</p>
+                <p id="timestamp" class="text-slate-200 font-medium">--</p>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <p class="text-slate-400 text-xs uppercase tracking-wider">Exchange</p>
+                <p class="text-slate-200 font-medium">NSE/BSE India</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const API = "https://stock-dashboard-ok26.onrender.com";
+        let chart;
+
+        async function loadData() {
+            const symbol = document.getElementById("symbol").value.toUpperCase() || "INFY.NS";
+            const statusEl = document.getElementById("status");
+            const btn = document.querySelector("button");
+
+            try {
+                // UI Loading State
+                statusEl.innerText = "Fetching data...";
+                btn.innerText = "Loading...";
+                btn.disabled = true;
+
+                const res = await fetch(`${API}/data/${symbol}`);
+                const data = await res.json();
+
+                const labels = data.map(d => d.date);
+                const prices = data.map(d => d.close);
+                const latestPrice = prices[prices.length - 1];
+
+                // Update UI elements
+                document.getElementById("chartTitle").innerText = `${symbol} Performance`;
+                document.getElementById("priceTag").innerText = `₹${latestPrice.toLocaleString()}`;
+                document.getElementById("timestamp").innerText = new Date().toLocaleTimeString();
+
+                if (chart) chart.destroy();
+
+                const ctx = document.getElementById("chart").getContext("2d");
+                
+                // Gradient for the line area
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+                gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Price',
+                            data: prices,
+                            borderColor: '#3b82f6',
+                            borderWidth: 3,
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.4, // Smooth curves
+                            pointRadius: 0, // Clean look
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#3b82f6'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#64748b' }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#64748b' }
+                            }
+                        }
+                    }
+                });
+
+                statusEl.innerText = "Connected";
+                statusEl.className = "text-emerald-400 font-medium";
+            } catch (err) {
+                statusEl.innerText = "Error loading data";
+                statusEl.className = "text-red-400 font-medium";
+                console.error(err);
+            } finally {
+                btn.innerText = "Analyze";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

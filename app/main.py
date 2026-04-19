@@ -2,10 +2,20 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from .database import SessionLocal, engine, Base
 from . import crud, data_loader
+from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# ✅ CORS MIDDLEWARE (IMPORTANT)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # sab domains allow (frontend ke liye)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_db():
     db = SessionLocal()
@@ -37,4 +47,4 @@ def summary(symbol: str, db: Session = Depends(get_db)):
 
 @app.get("/compare")
 def compare(symbol1: str, symbol2: str, db: Session = Depends(get_db)):
-    return crud.compare_stocks(db, symbol1, symbol2)
+    return crud.compare_stocks(db, symbol1, symbol2)  
