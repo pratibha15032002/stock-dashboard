@@ -1,39 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>ProStock Dashboard</title>
+
+
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+  
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
         .glass-card {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
     </style>
 </head>
+
 <body class="min-h-screen p-4 md:p-8">
 
     <div class="max-w-5xl mx-auto">
         <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-                    Stock Dashboard
+                <h1
+                    class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                    Stock Terminal
                 </h1>
-                <p class="text-slate-400 text-sm">Real-time market data visualization</p>
+                <p class="text-slate-400 text-sm"> Data Tracking</p>
             </div>
-            
+
             <div class="flex items-center gap-2">
-                <input id="symbol" 
-                       type="text" 
-                       placeholder="e.g. INFY.NS" 
-                       class="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all w-full md:w-48">
-                <button onclick="loadData()" 
-                        class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95">
+                <input id="symbol" type="text" placeholder="e.g. INFY.NS"
+                    class="bg-slate-800 border border-slate-700 text-black px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all w-full md:w-48 uppercase">
+                <button id="analyzeBtn" onclick="loadData()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95">
                     Analyze
                 </button>
             </div>
@@ -41,114 +70,144 @@
 
         <main class="glass-card rounded-2xl p-6 shadow-2xl">
             <div class="flex items-center justify-between mb-6">
-                <h2 id="chartTitle" class="text-xl font-semibold text-slate-200">Market Overview</h2>
-                <span id="priceTag" class="text-emerald-400 font-mono text-lg"></span>
+                <div>
+                    <h2 id="chartTitle" class="text-xl font-semibold text-slate-200">Market Overview</h2>
+                    <p id="status" class="text-xs text-emerald-400 font-medium">Ready</p>
+                </div>
+                <span id="priceTag" class="text-emerald-400 font-mono text-2xl font-bold"></span>
             </div>
-            
+
             <div class="relative h-[400px] w-full">
                 <canvas id="chart"></canvas>
             </div>
         </main>
 
-        <footer class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <footer class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 text-center md:text-left">
             <div class="glass-card p-4 rounded-xl">
-                <p class="text-slate-400 text-xs uppercase tracking-wider">Status</p>
-                <p id="status" class="text-emerald-400 font-medium">System Ready</p>
+                <p class="text-slate-400 text-xs uppercase tracking-wider">Last Updated</p>
+                <p id="timestamp" class="text-slate-200 font-medium font-mono">--</p>
             </div>
             <div class="glass-card p-4 rounded-xl">
-                <p class="text-slate-400 text-xs uppercase tracking-wider">Last Sync</p>
-                <p id="timestamp" class="text-slate-200 font-medium">--</p>
-            </div>
-            <div class="glass-card p-4 rounded-xl">
-                <p class="text-slate-400 text-xs uppercase tracking-wider">Exchange</p>
-                <p class="text-slate-200 font-medium">NSE/BSE India</p>
+                <p class="text-slate-400 text-xs uppercase tracking-wider">Data Source</p>
+                <p class="text-slate-200 font-medium"> Live</p>
             </div>
         </footer>
     </div>
 
     <script>
+        // API URL updated to your Render link
         const API = "https://stock-dashboard-ok26.onrender.com";
         let chart;
 
         async function loadData() {
-            const symbol = document.getElementById("symbol").value.toUpperCase() || "INFY.NS";
+            const symbolInput = document.getElementById("symbol").value.trim();
+            const symbol = symbolInput.toUpperCase() || "INFY.NS";
             const statusEl = document.getElementById("status");
-            const btn = document.querySelector("button");
+            const btn = document.getElementById("analyzeBtn");
+            const priceTag = document.getElementById("priceTag");
 
             try {
-                // UI Loading State
-                statusEl.innerText = "Fetching data...";
-                btn.innerText = "Loading...";
+                // UI State: Start Loading
+                statusEl.innerText = "Step 1/2: Triggering Data Load...";
+                statusEl.className = "text-xs text-blue-400 loading-pulse font-medium";
+                btn.innerText = "Syncing...";
                 btn.disabled = true;
 
+                // FIX 1: Trigger the POST /load/ API first to populate/update the DB
+                const loadResponse = await fetch(`${API}/load/${symbol}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!loadResponse.ok) throw new Error("Sync Failed");
+
+                // UI State: Data Loaded, now fetching for UI
+                statusEl.innerText = "Step 2/2: Fetching From Database...";
+
+                // FIX 2: Now fetch the data from the DB
                 const res = await fetch(`${API}/data/${symbol}`);
-                const data = await res.json();
+                let data = await res.json();
+
+                if (!data || data.length === 0) {
+                    statusEl.innerText = "Error: No data in DB";
+                    statusEl.className = "text-xs text-red-400 font-medium";
+                    return;
+                }
+
+                // FIX 3: Reverse data because Chart.js needs OLD to NEW (Ascending)
+                // Your CRUD returns Descending (limit 30)
+                data.reverse();
 
                 const labels = data.map(d => d.date);
                 const prices = data.map(d => d.close);
                 const latestPrice = prices[prices.length - 1];
 
                 // Update UI elements
-                document.getElementById("chartTitle").innerText = `${symbol} Performance`;
-                document.getElementById("priceTag").innerText = `₹${latestPrice.toLocaleString()}`;
-                document.getElementById("timestamp").innerText = new Date().toLocaleTimeString();
+                document.getElementById("chartTitle").innerText = `${symbol} - Last 30 Trading Days`;
+                priceTag.innerText = `₹${latestPrice.toLocaleString('en-IN')}`;
+                document.getElementById("timestamp").innerText = new Date().toLocaleString();
 
-                if (chart) chart.destroy();
+                renderChart(labels, prices, symbol);
 
-                const ctx = document.getElementById("chart").getContext("2d");
-                
-                // Gradient for the line area
-                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
-                gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                statusEl.innerText = "● Live Connected";
+                statusEl.className = "text-xs text-emerald-400 font-medium";
 
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Price',
-                            data: prices,
-                            borderColor: '#3b82f6',
-                            borderWidth: 3,
-                            backgroundColor: gradient,
-                            fill: true,
-                            tension: 0.4, // Smooth curves
-                            pointRadius: 0, // Clean look
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#3b82f6'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            x: {
-                                grid: { display: false },
-                                ticks: { color: '#64748b' }
-                            },
-                            y: {
-                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                                ticks: { color: '#64748b' }
-                            }
-                        }
-                    }
-                });
-
-                statusEl.innerText = "Connected";
-                statusEl.className = "text-emerald-400 font-medium";
             } catch (err) {
-                statusEl.innerText = "Error loading data";
-                statusEl.className = "text-red-400 font-medium";
+                statusEl.innerText = "Connection Error";
+                statusEl.className = "text-xs text-red-400 font-medium";
                 console.error(err);
             } finally {
                 btn.innerText = "Analyze";
                 btn.disabled = false;
             }
         }
+
+        function renderChart(labels, prices, symbol) {
+            if (chart) chart.destroy();
+
+            const ctx = document.getElementById("chart").getContext("2d");
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Closing Price',
+                        data: prices,
+                        borderColor: '#3b82f6',
+                        borderWidth: 3,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b', maxRotation: 45, minRotation: 45 }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#64748b' }
+                        }
+                    }
+                }
+            });
+        }
     </script>
 </body>
+
 </html>

@@ -8,10 +8,10 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# ✅ CORS MIDDLEWARE (IMPORTANT)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # sab domains allow (frontend ke liye)
+    allow_origins=["*"],   
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
